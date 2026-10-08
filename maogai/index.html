@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>毛泽东思想活的灵魂 · 群众路线 —— 专题宣讲</title>
+<!-- 提前建立到播放器的连接，缩短第二页视频的白屏时间 -->
+<link rel="preconnect" href="https://player.bilibili.com">
+<link rel="preconnect" href="https://i0.hdslb.com" crossorigin>
+<link rel="dns-prefetch" href="//player.bilibili.com">
+<link rel="dns-prefetch" href="//i0.hdslb.com">
+<link rel="dns-prefetch" href="//upos-sz-mirrorcos.bilivideo.com">
 <style>
 :root{
   --red-950:#3b040a;
@@ -58,6 +64,8 @@ body{
   animation:spin 160s linear infinite;
 }
 @keyframes spin{to{transform:translate(-50%,-50%) rotate(360deg);}}
+/* 未显示的页面不必再驱动光芒旋转，省下合成线程的开销 */
+.page:not(.on) .rays{animation-play-state:paused;}
 
 .glow{
   position:absolute;inset:0;
@@ -69,9 +77,14 @@ body{
   background:radial-gradient(120% 90% at 50% 46%, rgba(0,0,0,0) 38%, rgba(24,3,6,.62) 100%);
   pointer-events:none;
 }
+/* 胶片颗粒：改为一张缓存好的 SVG 噪点图平铺。
+   原来每页挂一个实时 feTurbulence 滤镜，全屏噪点要在每次重绘时重新计算，是切页卡顿的主因之一。 */
 .grain{
-  position:absolute;inset:0;width:100%;height:100%;
+  position:absolute;inset:0;
   opacity:.15;mix-blend-mode:overlay;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23g)'/%3E%3C/svg%3E");
+  background-repeat:repeat;
+  background-size:200px 200px;
 }
 .frame{
   position:absolute;inset:2.4cqw;
@@ -218,6 +231,22 @@ body{
   box-shadow:0 1.4cqw 3.4cqw rgba(0,0,0,.55), 0 0 4cqw rgba(190,40,52,.28);
 }
 .panel iframe{position:absolute;inset:0;width:100%;height:100%;display:block;border:0;}
+/* 播放器就绪前的占位：盖住纯黑，等 iframe load 后淡出 */
+.panel-poster{
+  position:absolute;inset:0;z-index:2;pointer-events:none;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.2cqw;
+  background:radial-gradient(62% 62% at 50% 44%, #3a0a12 0%, #1b0407 68%, #120304 100%);
+  opacity:1;transition:opacity .45s ease;
+}
+.panel-poster.gone{opacity:0;}
+.panel-poster .ring{
+  width:3.2cqw;height:3.2cqw;border-radius:50%;
+  border:1.5px solid rgba(227,191,120,.25);
+  border-top-color:var(--gold);
+  animation:ringSpin .95s linear infinite;
+}
+@keyframes ringSpin{to{transform:rotate(360deg);}}
+.panel-poster em{font-style:normal;font-size:1.12cqw;letter-spacing:.3em;color:rgba(240,220,188,.66);}
 
 /* ==================== 第 3 页 · 教材论述 ==================== */
 .p3 .content{padding:min(7.2cqw,12.8cqh) 5cqw min(4.4cqw,7.82cqh);}
@@ -344,6 +373,8 @@ body{
 @media (prefers-reduced-motion:reduce){
   .page{transition:none;}
   .rays{animation:none;}
+  .panel-poster{transition:none;}
+  .panel-poster .ring{animation:none;}
   .page.on .eyebrow,.page.on .label,.page.on .title-block,.page.on .quote,
   .page.on .meta,.page.on .panel-shell,.page.on .keys,.page.on .story-layout,.page.on .closing-layout,.page.on .thanks-card,
   .page.on .crest,.page.on .sweep{animation:none;}
@@ -422,13 +453,7 @@ body{
         </div>
       </div>
 
-      <svg class="grain" aria-hidden="true">
-        <filter id="grainF1">
-          <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/>
-          <feColorMatrix type="saturate" values="0"/>
-        </filter>
-        <rect width="100%" height="100%" filter="url(#grainF1)"/>
-      </svg>
+      <div class="grain"></div>
       <div class="vignette"></div>
       <div class="sweep"></div>
     </div>
@@ -453,18 +478,13 @@ body{
         <div class="panel-shell">
           <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
           <div class="panel">
-            <iframe id="playerFrame" data-src="https://player.bilibili.com/player.html?isOutside=true&aid=113875471044594&bvid=BV1ZNfiYHEKR&cid=28027127844&p=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"></iframe>
+            <div class="panel-poster" id="poster"><span class="ring"></span><em>视频载入中</em></div>
+            <iframe id="playerFrame" data-src="https://player.bilibili.com/player.html?isOutside=true&aid=113875471044594&bvid=BV1ZNfiYHEKR&cid=28027127844&p=1&autoplay=0&danmaku=0&high_quality=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"></iframe>
           </div>
         </div>
       </div>
 
-      <svg class="grain" aria-hidden="true">
-        <filter id="grainF2">
-          <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/>
-          <feColorMatrix type="saturate" values="0"/>
-        </filter>
-        <rect width="100%" height="100%" filter="url(#grainF2)"/>
-      </svg>
+      <div class="grain"></div>
       <div class="vignette"></div>
       <div class="sweep"></div>
     </div>
@@ -498,13 +518,7 @@ body{
         </div>
       </div>
 
-      <svg class="grain" aria-hidden="true">
-        <filter id="grainF3">
-          <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/>
-          <feColorMatrix type="saturate" values="0"/>
-        </filter>
-        <rect width="100%" height="100%" filter="url(#grainF3)"/>
-      </svg>
+      <div class="grain"></div>
       <div class="vignette"></div>
       <div class="sweep"></div>
     </div>
@@ -515,13 +529,7 @@ body{
     <div class="slide">
       <div class="rays"></div>
       <div class="glow"></div>
-      <svg class="grain" aria-hidden="true">
-        <filter id="grainF4">
-          <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/>
-          <feColorMatrix type="saturate" values="0"/>
-        </filter>
-        <rect width="100%" height="100%" filter="url(#grainF4)"/>
-      </svg>
+      <div class="grain"></div>
       <div class="vignette"></div>
       <div class="frame"></div>
 
@@ -537,7 +545,7 @@ body{
       <div class="crest"><svg viewBox="0 0 100 100" aria-hidden="true"><path d="M50 6 61.2 40.4 97.5 40.4 68.1 61.8 79.3 96.2 50 74.8 20.7 96.2 31.9 61.8 2.5 40.4 38.8 40.4Z"/></svg></div>
       <div class="content"><div class="eyebrow"><i></i>毛泽东思想活的灵魂 · 群众路线<i></i></div><div class="label"><i></i>土地革命<i></i></div>
         <div class="story-layout">
-          <figure class="story-visual document"><img src="assets/history/land-revolution-law.jpg" alt="中华苏维埃共和国土地法保存文献影像"><figcaption>文献影像｜中华苏维埃共和国土地法<br><a href="https://commons.wikimedia.org/wiki/File:The_Land_Law_of_the_Chinese_Soviet_Republic.jpg" target="_blank" rel="noreferrer">摄影：黄琬琦；Wikimedia Commons</a> · <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noreferrer">CC BY-SA 4.0</a></figcaption></figure>
+          <figure class="story-visual document"><img decoding="async" src="assets/history/land-revolution-law.jpg" alt="中华苏维埃共和国土地法保存文献影像"><figcaption>文献影像｜中华苏维埃共和国土地法<br><a href="https://commons.wikimedia.org/wiki/File:The_Land_Law_of_the_Chinese_Soviet_Republic.jpg" target="_blank" rel="noreferrer">摄影：黄琬琦；Wikimedia Commons</a> · <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noreferrer">CC BY-SA 4.0</a></figcaption></figure>
           <div class="story-copy"><p class="story-period">1930 — 1934 · 中央苏区实践</p><h2 class="story-title">先做调查<br>再制定土地政策</h2><p class="story-lead">土地革命时期，群众路线体现在一条具体工作链上：走进农村调查，弄清群众的土地诉求，再把调查转化为分田政策。</p>
             <ul class="story-points"><li><b>01</b><span>1930年开展寻乌、兴国等调查，了解农村社会结构和土地问题。</span></li><li><b>02</b><span>把贫农、中农等不同群体的实际情况纳入分析，避免脱离地方情形分配土地。</span></li><li><b>03</b><span>制定《兴国土地法》等政策，并通过苏维埃政权落实土地革命。</span></li></ul>
             <p class="story-thesis">这一时期的鲜明方法：调查群众的实际处境，以群众利益检验政策。</p></div>
@@ -552,7 +560,7 @@ body{
       <div class="crest"><svg viewBox="0 0 100 100" aria-hidden="true"><path d="M50 6 61.2 40.4 97.5 40.4 68.1 61.8 79.3 96.2 50 74.8 20.7 96.2 2.5 40.4 38.8 40.4Z"/></svg></div>
       <div class="content"><div class="eyebrow"><i></i>毛泽东思想活的灵魂 · 群众路线<i></i></div><div class="label"><i></i>抗日战争<i></i></div>
         <div class="story-layout">
-          <figure class="story-visual"><img src="assets/history/anti-japanese-rent-reduction.jpg" alt="1944年晋察冀边区召开贯彻减租大会"><figcaption>史料照片｜1944年1月，晋察冀边区汾庄召开贯彻减租大会<br><a href="https://www.hpcbristol.sjtu.edu.cn/visual/ML03-d080" target="_blank" rel="noreferrer">摄影：Michael Lindsay；© Lindsay Family；布里斯托大学中国历史照片</a></figcaption></figure>
+          <figure class="story-visual"><img decoding="async" src="assets/history/anti-japanese-rent-reduction.jpg" alt="1944年晋察冀边区召开贯彻减租大会"><figcaption>史料照片｜1944年1月，晋察冀边区汾庄召开贯彻减租大会<br><a href="https://www.hpcbristol.sjtu.edu.cn/visual/ML03-d080" target="_blank" rel="noreferrer">摄影：Michael Lindsay；© Lindsay Family；布里斯托大学中国历史照片</a></figcaption></figure>
           <div class="story-copy"><p class="story-period">1939 — 1945 · 抗日根据地的群众工作</p><h2 class="story-title">把抗战动员<br>落到群众利益上</h2><p class="story-lead">根据地的群众工作不止是号召参战，也要回应农民的现实处境。减租减息把改善民生与坚持抗战联系起来。</p>
             <ul class="story-points"><li><b>01</b><span>1944年的减租大会，把政策带到村庄，由群众参与具体落实。</span></li><li><b>02</b><span>减轻农民负担，改善农民与地主关系，同时保留抗日统一战线。</span></li><li><b>03</b><span>农民生产积极性提高，为根据地生产和持续抗战提供基础。</span></li></ul>
             <p class="story-thesis">群众路线在战时的具体样貌：解释政策、组织参与、改善群众生活，并共同承担抗战任务。</p></div>
@@ -567,7 +575,7 @@ body{
       <div class="crest"><svg viewBox="0 0 100 100" aria-hidden="true"><path d="M50 6 61.2 40.4 97.5 40.4 68.1 61.8 79.3 96.2 50 74.8 20.7 96.2 31.9 61.8 2.5 40.4 38.8 40.4Z"/></svg></div>
       <div class="content"><div class="eyebrow"><i></i>毛泽东思想活的灵魂 · 群众路线<i></i></div><div class="label"><i></i>解放战争<i></i></div>
         <div class="story-layout">
-          <figure class="story-visual"><img src="assets/history/liberation-cart-diorama.jpg" alt="淮海战役纪念馆复原的支前民工推独轮车场景"><figcaption>场景复原｜淮海战役纪念馆展示支前民工推车运粮<br><a href="https://www.jsrd.gov.cn/zt/d_10494/jsds/202107/t20210707_1239294.shtml" target="_blank" rel="noreferrer">图片与史料来源：江苏人大</a></figcaption></figure>
+          <figure class="story-visual"><img decoding="async" src="assets/history/liberation-cart-diorama.jpg" alt="淮海战役纪念馆复原的支前民工推独轮车场景"><figcaption>场景复原｜淮海战役纪念馆展示支前民工推车运粮<br><a href="https://www.jsrd.gov.cn/zt/d_10494/jsds/202107/t20210707_1239294.shtml" target="_blank" rel="noreferrer">图片与史料来源：江苏人大</a></figcaption></figure>
           <div class="story-copy"><p class="story-period">1948 — 1949 · 淮海战役支前</p><h2 class="story-title">把群众力量<br>组织成战勤网络</h2><p class="story-lead">淮海战役的前线行动，连接着后方粮运、伤员转运、道路保障和民站接力。群众不是战场背景，而是战役保障体系的重要组成部分。</p><p class="story-metric">543万<small>支前民工</small></p>
             <ul class="story-points"><li><b>01</b><span>群众推车、挑担、赶运粮食弹药，也参与救护和伤员转运。</span></li><li><b>02</b><span>沿运输线路设民站、茶水站，把分散的人力接成连续支援网络。</span></li><li><b>03</b><span>战役史料记载：向前线运送粮食9.6亿斤，并转送伤员。</span></li></ul>
             <p class="story-thesis">群众路线在解放战争中的鲜明实践：把依靠群众落实为组织、保障群众参与的具体制度和行动。</p></div>
@@ -582,7 +590,7 @@ body{
       <div class="crest"><svg viewBox="0 0 100 100" aria-hidden="true"><path d="M50 6 61.2 40.4 97.5 40.4 68.1 61.8 79.3 96.2 50 74.8 20.7 96.2 31.9 61.8 2.5 40.4 38.8 40.4Z"/></svg></div>
       <div class="content"><div class="eyebrow"><i></i>毛泽东思想活的灵魂 · 群众路线<i></i></div><div class="label"><i></i>解放后<i></i></div>
         <div class="story-layout">
-          <figure class="story-visual"><img src="assets/history/field-survey-1955.jpg" alt="1955年朱德、康克清在北京昌平与农民交谈并了解秋收分配"><figcaption>历史影像｜1955年朱德、康克清在北京昌平调查秋收和分配<br><a href="https://commons.wikimedia.org/wiki/File:Zhu_De_couple_talking_with_peasants_in_Changping_County,_Beijing.jpg" target="_blank" rel="noreferrer">图片来源：Wikimedia Commons</a></figcaption></figure>
+          <figure class="story-visual"><img decoding="async" src="assets/history/field-survey-1955.jpg" alt="1955年朱德、康克清在北京昌平与农民交谈并了解秋收分配"><figcaption>历史影像｜1955年朱德、康克清在北京昌平调查秋收和分配<br><a href="https://commons.wikimedia.org/wiki/File:Zhu_De_couple_talking_with_peasants_in_Changping_County,_Beijing.jpg" target="_blank" rel="noreferrer">图片来源：Wikimedia Commons</a></figcaption></figure>
           <div class="story-copy"><p class="story-period">1949年以后 · 从革命党到执政党</p><h2 class="story-title">把调查研究<br>变成日常工作方法</h2><p class="story-lead">进入建设时期，群众路线的重点转向如何保持同群众的联系：到基层了解情况，遇事同群众商量，再用实践检验工作。</p>
             <ul class="story-points"><li><b>01</b><span>1955年朱德、康克清在昌平向农民了解秋收和分配，留下基层调查的具体场景。</span></li><li><b>02</b><span>向群众学习，把一线经验带回政策和工作安排。</span></li><li><b>03</b><span>工作效果回到群众实践中检验，保持联系而非只凭文件判断。</span></li></ul>
             <p class="story-thesis">历史转折点：革命时期“依靠群众”的经验，延续为执政后的调查研究与群众工作。</p></div>
@@ -597,7 +605,7 @@ body{
       <div class="crest"><svg viewBox="0 0 100 100" aria-hidden="true"><path d="M50 6 61.2 40.4 97.5 40.4 68.1 61.8 79.3 96.2 50 74.8 20.7 96.2 31.9 61.8 2.5 40.4 38.8 40.4Z"/></svg></div>
       <div class="content"><div class="eyebrow"><i></i>毛泽东思想活的灵魂 · 群众路线<i></i></div><div class="label"><i></i>当下展望<i></i></div>
         <div class="closing-layout">
-          <figure class="story-visual"><img src="assets/history/community-service-2025.jpg" alt="2025年湖南社区志愿者为居民提供义诊服务"><figcaption>当下实践｜2025年湖南社区志愿者为居民提供义诊<br><a href="https://enghunan.gov.cn/hneng/News/Localnews/202503/t20250305_33602974.html" target="_blank" rel="noreferrer">摄影：蔡文龙；来源：湖南省人民政府网</a></figcaption></figure>
+          <figure class="story-visual"><img decoding="async" src="assets/history/community-service-2025.jpg" alt="2025年湖南社区志愿者为居民提供义诊服务"><figcaption>当下实践｜2025年湖南社区志愿者为居民提供义诊<br><a href="https://enghunan.gov.cn/hneng/News/Localnews/202503/t20250305_33602974.html" target="_blank" rel="noreferrer">摄影：蔡文龙；来源：湖南省人民政府网</a></figcaption></figure>
           <div class="closing-copy"><p class="story-period">从历史经验走向日常行动</p><h2>把群众路线<br>落在每一件具体事上</h2><p class="story-lead">今天，坚持群众路线，可以从倾听真实诉求、做好调查研究、解决身边问题开始。</p>
             <div class="closing-steps"><span>倾听意见：让群众表达真实需求。</span><span>解决问题：把回应落实到可感知的行动。</span><span>接受监督：在反馈中改进工作。</span></div>
           </div>
@@ -636,6 +644,7 @@ body{
   var fsBtn     = document.getElementById('fsBtn');
   var player    = document.getElementById('playerFrame');
   var book      = document.getElementById('bookFrame');
+  var poster    = document.getElementById('poster');
   var PLAYER_SRC = player.getAttribute('data-src');
   var BOOK_SRC   = book.getAttribute('data-src');
 
@@ -661,14 +670,44 @@ body{
     try{ history.replaceState(null, '', '#' + (idx + 1)); }catch(e){}
   }
 
+  /* --- 两个 iframe 的加载与预热 --- */
+  /* 播放器就绪前用遮罩盖住黑屏，load 后淡出；4 秒兜底强制撤掉 */
+  var posterT = 0;
+  function armPoster(){
+    poster.classList.remove('gone');
+    clearTimeout(posterT);
+    posterT = setTimeout(function(){ poster.classList.add('gone'); }, 4000);
+  }
+  function loadPlayer(){
+    if(player.getAttribute('src') === PLAYER_SRC) return;
+    armPoster();
+    player.setAttribute('src', PLAYER_SRC);
+  }
+  player.addEventListener('load', function(){
+    if(player.getAttribute('src') === 'about:blank') return;
+    clearTimeout(posterT);
+    poster.classList.add('gone');
+  });
+  function loadBook(){ if(!book.hasAttribute('src')) book.setAttribute('src', BOOK_SRC); }
+
+  /* 首屏渲染完成后趁空闲预热：先播放器，稍后教材，错开以免互抢带宽 */
+  var idle = window.requestIdleCallback ? window.requestIdleCallback.bind(window)
+                                        : function(f){ return setTimeout(f, 900); };
+  idle(function(){ loadPlayer(); setTimeout(loadBook, 1200); }, {timeout:2000});
+
   function show(n, prev){
     n = Math.max(0, Math.min(N - 1, n));
     if(n === idx && prev !== -1) return;   /* 已在当前页则不动，避免重复加载视频 */
-    /* 视频页：进入才加载，离开即掐断播放源，避免声音跟着翻页 */
-    if(n === 1){ player.setAttribute('src', PLAYER_SRC); }
-    else if(prev === 1){ player.setAttribute('src', 'about:blank'); }
-    /* 教材页：首次进入才加载 */
-    if(n === 3 && !book.hasAttribute('src')){ book.setAttribute('src', BOOK_SRC); }
+    /* 视频页：进入时取用已预热的播放器；离开则掐断播放源，避免声音跟着翻页 */
+    if(n === 1){ loadPlayer(); }
+    else if(prev === 1){
+      player.setAttribute('src', 'about:blank');
+      clearTimeout(posterT);
+      /* 稍后在后台重新预热，返回第二页时同样秒开 */
+      setTimeout(function(){ if(idx !== 1) loadPlayer(); }, 1600);
+    }
+    /* 教材页：首次进入才加载（通常已被预热） */
+    if(n === 3){ loadBook(); }
 
     idx = n;
     pages.forEach(function(p, k){ p.classList.toggle('on', k === idx); });
@@ -720,12 +759,17 @@ body{
   fsBtn.addEventListener('click', toggleFull);
 
   /* --- 第 4 页：把教材整幅缩放到窗口内（留出画框边距，四周露红不露黑） --- */
-  var BW = 1494, BH = 1101;
+  var BW = 1494, BH = 1101, fitT = 0;
   function fitBook(){
     var k = Math.min(window.innerWidth / BW, window.innerHeight / BH) * 0.90;
-    book.parentNode.style.setProperty('--k', k);
+    /* 取整到万分位，避免缩放系数抖动导致 iframe 反复重栅格化 */
+    book.parentNode.style.setProperty('--k', k.toFixed(4));
   }
-  window.addEventListener('resize', fitBook);
+  /* resize 合并到下一帧，拖动窗口时不再每事件都重排一次 */
+  window.addEventListener('resize', function(){
+    if(fitT) return;
+    fitT = requestAnimationFrame(function(){ fitT = 0; fitBook(); });
+  });
 
   /* --- 初始化（支持 #2 之类的直链） --- */
   fitBook();
